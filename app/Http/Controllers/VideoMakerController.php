@@ -284,7 +284,7 @@ class VideoMakerController extends Controller
     {
         $links = [];
         foreach ($selectedItems as $selectedItem) {
-            $links[] = self::generateAmazonLink($selectedItem["ASIN"]);
+            $links[] = self::generateAmazonLink($selectedItem);
         }
 
         $keywordHashTag = str_replace(" ", "_", $keyword);
@@ -320,10 +320,10 @@ EOT;
     }
 
     //generate amazon affiliate link from asin
-    public static function generateAmazonLink($asin)
+    public static function generateAmazonLink($item)
     {
         //short url using tinnyurl
-        $url = "https://www.amazon.com/dp/$asin/?tag=" . env('AMAZON_ASSOCIATE_TAG');
+        $url = $item["DetailPageURL"];
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
     }
 }
