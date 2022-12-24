@@ -26,17 +26,6 @@ class VideoMakerController extends Controller
 
     }
 
-    //generate amazon affiliate link from asin
-    //short the link using amazon affiliate link shortener
-    public static function generateAffiliateLink($asin)
-    {
-        $asin = "B00EOE0WKQ";
-        $affiliate_id = "myaffiliateid";
-        $affiliate_link = "https://amzn.to/" . $asin . "?tag=" . $affiliate_id;
-
-        return $affiliate_link;
-    }
-
     public function generateVideo(GenerateVideo $commandHandler)
     {
         $keyword = $commandHandler->argument("keyword");
@@ -51,6 +40,8 @@ class VideoMakerController extends Controller
 
         $response = AmazonProduct::search('All', $keyword, 1);
         $items = $response['SearchResult']['Items'];
+
+        $selectedItems = [];
 
         $commandHandler->info("Total Products Found: " . count($items));
 
@@ -99,7 +90,7 @@ class VideoMakerController extends Controller
                         $font->color('#00C2CB');
                     });
 
-                    $primaryImage->resize(1280, 720);
+                    $primaryTemplate->resize(1280, 720);
                     $primaryTemplate->save(storage_path($template_path));
 
                     $images = $item["Images"]["Variants"];
@@ -179,6 +170,7 @@ class VideoMakerController extends Controller
 
                     $commandHandler->info("Video generate completed for video:" . ($productCount + 1));
 
+                    $selectedItems[] = $item;
                     $productCount++;
 
                 }
@@ -245,22 +237,26 @@ class VideoMakerController extends Controller
         echo $process->getOutput();
 
         //move output file
-        $video_name = "video_" . time() . ".mp4";
+        $video_name = $keyword . "_video_" . time() . ".mp4";
         File::move(storage_path('app/output/video_with_audio.mp4'), base_path('AllVideos/' . $video_name . '.mp4'));
 
         $commandHandler->info("Audio merge completed");
 
+        //generate links
+        self::generateLinksFile($selectedItems, $keyword);
+
         $commandHandler->info("Video generate completed");
-        $commandHandler->info("Video path: " . base_path('AllVideos/' . $video_name . '.mp4'));
+        $commandHandler->info("Video path: " . base_path('AllVideos/' . $video_name));
 
     }
 
     public static function generateTitle($keyword)
     {
         $image = Image::make(storage_path('app/template/title-template.jpg'));
-        $image->text(strtoupper("Top Five $keyword"), 500, 300, function ($font) {
+        $title = "Top Five Best $keyword";
+        $image->text(strtoupper($title), 500, 300, function ($font) use($title) {
             $font->file(storage_path("app/fonts/title-font.ttf"));
-            $font->size(50);
+            $font->size(1400/strlen($title));
             $font->align('center');
             $font->valign('center');
             $font->color('#FFFFFF');
@@ -284,4 +280,50 @@ class VideoMakerController extends Controller
         echo $process->getOutput();
     }
 
+    public function generateLinksFile($selectedItems, $keyword)
+    {
+        $links = [];
+        foreach ($selectedItems as $selectedItem) {
+            $links[] = self::generateAmazonLink($selectedItem["ASIN"]);
+        }
+
+        $keywordHashTag = str_replace(" ", "_", $keyword);
+
+        $text = <<<EOT
+Links to the best $keyword 2023. We've researched the best $keyword 2023 on Amazon and make a top five list to save your time and money.
+
+EOT;
+        foreach ($links as $index => $link) {
+            $text .= "\n" . ($index + 1) . " $link";
+        }
+
+
+        $text .= <<<EOT
+
+
+Disclaimer: Portions of footage found in this video is not the original content produced by this channel owner .
+
+Portions of stock footage of products were gathered from multiple sources including, manufacturers, fellow creators, and various other sources.
+
+If something belongs to you, and you want it to be removed, please do not hesitate to contact us through channel email address
+
+
+
+#Best_$keywordHashTag
+#Top_5_Best_$keywordHashTag
+EOT;
+
+
+        $file = fopen(base_path("AllVideos/$keyword.txt"), "w");
+        fwrite($file, $text . "\n");
+        fclose($file);
+    }
+
+    //generate amazon affiliate link from asin
+    public static function generateAmazonLink($asin)
+    {
+        //short url using tinnyurl
+        $url = "https://www.amazon.com/dp/$asin/?tag=" . env('AMAZON_ASSOCIATE_TAG');
+        return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
+    }
 }

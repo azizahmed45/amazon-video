@@ -11,15 +11,5 @@ use Symfony\Component\Process\Process;
 
 
 Route::get("test1", function () {
-    $keyword = "Iphone";
-    $image = Image::make(storage_path('app/template/title-template.jpg'));
-    $image->text(strtoupper("Top Five $keyword"), 500, 300, function ($font) {
-        $font->file(storage_path("app/fonts/title-font.ttf"));
-        $font->size(50);
-        $font->align('center');
-        $font->valign('center');
-        $font->color('#FFFFFF');
-    });
-
-    $image->save(storage_path('app/images/title-template.jpg'));
+//    \App\Http\Controllers\VideoMakerController::generateTitle("World Class Oven For Home Use");
 });
