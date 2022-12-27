@@ -6,6 +6,7 @@ use App\Console\Commands\GenerateVideo;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Intervention\Image\Facades\Image;
 use Revolution\Amazon\ProductAdvertising\Facades\AmazonProduct;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -156,7 +157,7 @@ class VideoMakerController extends Controller
                         $ffmpegCommand .= "[v$inputImageIndex]";
                     }
 
-                    $ffmpegCommand .= "concat=n=" . count($inputImages) . ":v=1:a=0,format=yuv420p[v]\" -map \"[v]\" " . escapeshellarg($outputFile);
+                    $ffmpegCommand .= "concat=n=" . count($inputImages) . ":v=1:a=0,format=yuv420p[v]\" -map \"[v]\" -r 30 " . escapeshellarg($outputFile);
 
                     $process = Process::fromShellCommandline($ffmpegCommand);
                     $process->setTimeout(1000000);
@@ -325,5 +326,39 @@ EOT;
         //short url using tinnyurl
         $url = $item["DetailPageURL"];
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
+    }
+
+    public static function generateScript($productName, $productFeatures, $price)
+    {
+        $inputText = "Generate a product description voice script using the below details.\n";
+        $inputText .= "Product Name: $productName \n";
+        $inputText .= "Product Price: $price \n";
+        $inputText .= "Product Features: \n";
+        foreach ($productFeatures as $index => $productFeature) {
+            $inputText .= ($index +1) . "$productFeature \n";
+        }
+
+        $apiKey = env('OPENAI_API_KEY');
+        $url = "https://api.openai.com/v1/completions";
+        $model = "text-davinci-003";
+
+        $data = [
+            "model" => $model,
+            "prompt" => $inputText,
+            "max_tokens" => 600,
+            "temperature" => 0.9,
+            "n" => 1,
+            "stream" => false
+        ];
+
+        $response = Http::withoutVerifying()
+            ->withHeaders([
+                "Content-Type" => "application/json",
+                "Authorization" => "Bearer $apiKey"
+            ])
+        ->post($url, $data)
+        ->json();
+
+        return $response["choices"][0]["text"];
     }
 }
