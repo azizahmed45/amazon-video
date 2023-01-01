@@ -20,15 +20,15 @@ use Symfony\Component\Process\Process;
 
 Route::get("test1", function () {
 
-    $keword = \App\Models\Keyword::query()->find(4);
-    VideoMakerController::mergeProductsVideo($keword->products,$keword);
-
-return "done";
+//    $keword = \App\Models\Keyword::query()->find(4);
+//    VideoMakerController::mergeProductsVideo($keword->products,$keword);
+//
+//return "done";
 
     $keywordText = "Stylish Women Watches";
 
     //delete all attached files
-    $attachmentList = \App\Models\Attachment::query()->get();
+    $attachmentList = \App\Models\Attachment::query()->where("type", "!=", "final_video")->get();
     foreach ($attachmentList as $attachment) {
         $realPath = storage_path($attachment->name);
         if (File::exists($realPath)) {
@@ -38,6 +38,7 @@ return "done";
 
     $data = VideoMakerController::getItems($keywordText);
     $products = VideoMakerController::saveProducts($data['items'], $data['keyword'], 5);
+    VideoMakerController::generateIntro($data['keyword']);
 
     foreach ($products as $product) {
         VideoMakerController::generatePrimaryImage($product);

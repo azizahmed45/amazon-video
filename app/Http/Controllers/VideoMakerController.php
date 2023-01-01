@@ -68,9 +68,59 @@ class VideoMakerController extends Controller
         return $products;
     }
 
-    public function generateVideoIntro()
+    public static function generateIntro(Keyword $keyword)
     {
+        $image = Image::make(storage_path('app/template/title-template.jpg'));
+        $title = "Top Five Best $keyword->keyword";
+        $image->text(strtoupper($title), 500, 300, function ($font) use ($title) {
+            $font->file(storage_path("app/fonts/title-font.ttf"));
+            $font->size(1400 / strlen($title));
+            $font->align('center');
+            $font->valign('center');
+            $font->color('#FFFFFF');
+        });
 
+        //generate unique name for image
+        $image_path = 'app/images/' . Str::uuid() . ".jpg";
+        $image->resize(1280, 720);
+        $image->save(storage_path($image_path));
+
+        //save attachment to database
+        $keyword->attachments()->create([
+            'name' => $image_path,
+            'type' => 'intro_image'
+        ]);
+
+        //generate audio
+        $audio_path = "app/audio/" . Str::uuid() . ".mp3";
+        self::generateAudio($title, $audio_path);
+
+        //save attachment to database
+        $keyword->attachments()->create([
+            'name' => $audio_path,
+            'type' => 'intro_audio'
+        ]);
+
+
+        $video_path = "app/videos/" . Str::uuid() . ".mp4";
+
+        $ffmpegCommand = env('FFMPEG_BINARIES') . " -loop 1 -i " . storage_path($image_path) . " -i " . storage_path($audio_path) . " -c:v libx264 -tune stillimage -c:a aac -strict experimental -b:a 192k -pix_fmt yuv420p -shortest -fflags shortest -max_interleave_delta 100M " . storage_path($video_path);
+
+        $process = Process::fromShellCommandline($ffmpegCommand);
+        $process->setTimeout(1000000);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
+        }
+
+        //save attachment to database
+        $keyword->attachments()->create([
+            'name' => $video_path,
+            'type' => 'intro_video'
+        ]);
+
+        echo $process->getOutput();
     }
 
     public static function generatePrimaryImage(Product $product)
@@ -233,12 +283,17 @@ class VideoMakerController extends Controller
         return $product_video;
     }
 
-    public static function mergeProductsVideo($productList, $keyword)
+    public static function mergeProductsVideo($productList, Keyword $keyword)
     {
         $input_counter = 0;
         $ffmpegCommand = env('FFMPEG_BINARIES');
         $ffmpegCommand .= " -i " . storage_path("app/template/intro.mp4");
         $input_counter++;
+        //get intro title video
+        $intro_title_video_path = $keyword->attachments()->where('type', 'intro_video')->first()->name;
+        $ffmpegCommand .= " -i " . storage_path($intro_title_video_path);
+        $input_counter++;
+
         for ($i = count($productList) - 1; $i >= 0; $i--) {
             $ffmpegCommand .= " -i " . storage_path("app/template/" . ($i+1) . ".mp4");
             $input_counter++;
@@ -249,7 +304,7 @@ class VideoMakerController extends Controller
         $ffmpegCommand .= " -i " . storage_path("app/template/outro.mp4");
         $input_counter++;
 
-        $video_path = "app/output/keyword_" . $keyword->id . $keyword->keyword .".mp4";
+        $video_path = "app/videos/". Str::uuid() .".mp4";
         $ffmpegCommand .= " -filter_complex \"concat=n=" . ($input_counter) . ":v=1:a=1\" -vsync 2 -y " . escapeshellarg(storage_path($video_path));
 
         Log::info($ffmpegCommand);
@@ -261,13 +316,77 @@ class VideoMakerController extends Controller
             throw new ProcessFailedException($process);
         }
 
-//        $keyword->attachments()->create([
-//            'name' => $video_path,
-//            'type' => 'output_video'
-//        ]);
+        $keyword->attachments()->create([
+            'name' => $video_path,
+            'type' => 'output_video'
+        ]);
+
+    }
+
+    public static function mergeBackGroundAudio(Keyword $keyword){
+        $background_audio_path = "app/template/audio.mp3";
+        $video = $keyword->attachments()->where('type', 'output_video')->first();
+
+        $video_path = "app/output/keyword_" . $keyword->id . $keyword->keyword .".mp4";
+
+        $ffmpegCommand = env('FFMPEG_BINARIES') . " -i " . storage_path($video->name) . " -i " . storage_path($background_audio_path) . " -filter_complex \"[0:a]volume=1[a1];[1:a]volume=0.2[a2];[a1][a2]amix=inputs=2[a]\" -map 0:v -map \"[a]\"  -c:v copy -c:a aac -strict experimental -shortest " . escapeshellarg(storage_path($video_path));
+
+        Log::info($ffmpegCommand);
+        $process = Process::fromShellCommandline($ffmpegCommand);
+        $process->setTimeout(36000);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
+        }
+
+        $keyword->attachments()->create([
+            'name' => $video_path,
+            'type' => 'final_video'
+        ]);
     }
 
     public function generateVideo(GenerateVideo $commandHandler)
+    {
+        $keywordText = $commandHandler->argument("keyword");
+
+        $commandHandler->comment("Generating video for keyword: " . $keywordText);
+
+        $commandHandler->comment("Deleting old temp files.");
+
+        //delete all attached files
+        $attachmentList = \App\Models\Attachment::query()->where("type", "!=", "final_video")->get();
+        foreach ($attachmentList as $attachment) {
+            $realPath = storage_path($attachment->name);
+            if (File::exists($realPath)) {
+                File::delete($realPath);
+            }
+        }
+
+        $commandHandler->comment("Getting amazon products.");
+
+        $data = VideoMakerController::getItems($keywordText);
+        $products = VideoMakerController::saveProducts($data['items'], $data['keyword'], 5);
+
+        $commandHandler->comment("Generating product videos.");
+
+        VideoMakerController::generateIntro($data['keyword']);
+
+        foreach ($products as $product) {
+            VideoMakerController::generatePrimaryImage($product);
+            VideoMakerController::generateImagesFromProduct($product);
+            VideoMakerController::generateAudioScript($product);
+            VideoMakerController::generateVideoForProduct($product);
+        }
+
+        VideoMakerController::mergeProductsVideo($products, $data['keyword']);
+        VideoMakerController::mergeBackGroundAudio($data['keyword']);
+
+        $commandHandler->info("Video generated successfully.");
+
+    }
+
+    public function generateVideoOld(GenerateVideo $commandHandler)
     {
         $keyword = $commandHandler->argument("keyword");
 

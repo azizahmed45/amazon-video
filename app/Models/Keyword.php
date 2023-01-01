@@ -17,4 +17,9 @@ class Keyword extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(Attachment::class);
+    }
 }
