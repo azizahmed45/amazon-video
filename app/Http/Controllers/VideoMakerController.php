@@ -48,6 +48,7 @@ class VideoMakerController extends Controller
 
                 $product = Product::create([
                     'title' => $items[$i]["ItemInfo"]["Title"]["DisplayValue"],
+                    'url' => $items[$i]["DetailPageURL"],
                     'features' => $items[$i]["ItemInfo"]["Features"]["DisplayValues"],
                     'primary_image_url' => $items[$i]["Images"]["Primary"]["Large"]["URL"],
                     'image_urls' => $image_urls,
@@ -641,17 +642,17 @@ class VideoMakerController extends Controller
         echo $process->getOutput();
     }
 
-    public function generateLinksFile($selectedItems, $keyword)
+    public static function generateLinksFile($selectedItems, Keyword $keyword)
     {
         $links = [];
         foreach ($selectedItems as $selectedItem) {
             $links[] = self::generateAmazonLink($selectedItem);
         }
 
-        $keywordHashTag = str_replace(" ", "_", $keyword);
+        $keywordHashTag = str_replace(" ", "_", $keyword->keyword);
 
         $text = <<<EOT
-Links to the best $keyword 2023. We've researched the best $keyword 2023 on Amazon and make a top five list to save your time and money.
+Links to the best $keyword->keyword 2023. We've researched the best $keyword->keyword 2023 on Amazon and make a top five list to save your time and money.
 
 EOT;
         foreach ($links as $index => $link) {
@@ -675,16 +676,16 @@ If something belongs to you, and you want it to be removed, please do not hesita
 EOT;
 
 
-        $file = fopen(base_path("AllVideos/$keyword.txt"), "w");
+        $file = fopen(storage_path("app/output/$keyword->keyword.txt"), "w");
         fwrite($file, $text . "\n");
         fclose($file);
     }
 
     //generate amazon affiliate link from asin
-    public static function generateAmazonLink($item)
+    public static function generateAmazonLink(Product $product)
     {
         //short url using tinnyurl
-        $url = $item["DetailPageURL"];
+        $url = $product->url;
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
     }
 
