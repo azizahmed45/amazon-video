@@ -383,6 +383,8 @@ class VideoMakerController extends Controller
         VideoMakerController::mergeProductsVideo($products, $data['keyword']);
         VideoMakerController::mergeBackGroundAudio($data['keyword']);
 
+        VideoMakerController::generateLinksFile($data['keyword']);
+
         $commandHandler->info("Video generated successfully.");
 
     }
@@ -642,11 +644,11 @@ class VideoMakerController extends Controller
         echo $process->getOutput();
     }
 
-    public static function generateLinksFile($selectedItems, Keyword $keyword)
+    public static function generateLinksFile(Keyword $keyword)
     {
         $links = [];
-        foreach ($selectedItems as $selectedItem) {
-            $links[] = self::generateAmazonLink($selectedItem);
+        foreach ($keyword->products as $product) {
+            $links[] = self::generateAmazonLink($product);
         }
 
         $keywordHashTag = str_replace(" ", "_", $keyword->keyword);
