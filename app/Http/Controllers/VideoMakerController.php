@@ -353,7 +353,7 @@ class VideoMakerController extends Controller
     public static function generateThumbnail(Keyword $keyword)
     {
         $text = strtoupper("Top 5 Best \n" . wordwrap($keyword->keyword, 12, "\n", true));
-        $image = Image::make(storage_path('app/template/title-template.jpg'));
+        $image = Image::make(storage_path('app/template/thumb-template.jpg'));
 
         $primaryImage = Image::make($keyword->products()->first()->primary_image_url);
 
