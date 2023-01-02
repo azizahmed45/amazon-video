@@ -415,7 +415,6 @@ class VideoMakerController extends Controller
             VideoMakerController::generateImagesFromProduct($product);
             VideoMakerController::generateAudioScript($product);
             VideoMakerController::generateVideoForProduct($product);
-            return;
         }
 
         VideoMakerController::mergeProductsVideo($products, $data['keyword']);
