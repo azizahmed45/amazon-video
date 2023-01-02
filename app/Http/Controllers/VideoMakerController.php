@@ -73,7 +73,7 @@ class VideoMakerController extends Controller
     {
         $image = Image::make(storage_path('app/template/title-template.jpg'));
         $title = "Top Five Best $keyword->keyword";
-        $image->text(strtoupper($title), 500, 300, function ($font) use ($title) {
+        $image->text(strtoupper(wordwrap($title, 50)), 500, 300, function ($font) use ($title) {
             $font->file(storage_path("app/fonts/title-font.ttf"));
             $font->size(1400 / strlen($title));
             $font->align('center');
@@ -170,11 +170,7 @@ class VideoMakerController extends Controller
         foreach ($product->scripts as $index => $script) {
             $template = Image::make(storage_path('app/template/product_image.jpg'));
 
-            if($image_count > $index){
-                $image = Image::make($product->image_urls[$index]);
-            } else {
-                $image = Image::make($product->image_urls[($image_count-1)%$index]);
-            }
+            $image = Image::make($product->image_urls[$index % $image_count]);
 
             $image->resize(400, null, function ($constraint) {
                 $constraint->aspectRatio();
@@ -182,9 +178,9 @@ class VideoMakerController extends Controller
 
             $template->insert($image, 'left', 50, 0);
 
-            $template->text(wordwrap($script, 35), 550, 120, function ($font) {
+            $template->text(wordwrap($script, 25), 550, 120, function ($font) {
                 $font->file(storage_path("app/fonts/ABeeZee-Regular.ttf"));
-                $font->size(20);
+                $font->size(25);
                 $font->color('#008037');
             });
 
@@ -328,7 +324,13 @@ class VideoMakerController extends Controller
         $background_audio_path = "app/template/audio.mp3";
         $video = $keyword->attachments()->where('type', 'output_video')->first();
 
-        $video_path = "app/output/keyword_" . $keyword->id . $keyword->keyword .".mp4";
+        //generate folder if not exist
+        $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
+        if(!file_exists(storage_path($folder))){
+            mkdir(storage_path($folder));
+        }
+
+        $video_path = "$folder/keyword_" . $keyword->id . $keyword->keyword .".mp4";
 
         $ffmpegCommand = env('FFMPEG_BINARIES') . " -i " . storage_path($video->name) . " -i " . storage_path($background_audio_path) . " -filter_complex \"[0:a]volume=1[a1];[1:a]volume=0.2[a2];[a1][a2]amix=inputs=2[a]\" -map 0:v -map \"[a]\"  -c:v copy -c:a aac -strict experimental -shortest " . escapeshellarg(storage_path($video_path));
 
@@ -345,6 +347,41 @@ class VideoMakerController extends Controller
             'name' => $video_path,
             'type' => 'final_video'
         ]);
+    }
+
+
+    public static function generateThumbnail(Keyword $keyword)
+    {
+        $text = strtoupper("Top 5 Best \n" . wordwrap($keyword->keyword, 12, "\n", true));
+        $image = Image::make(storage_path('app/template/title-template.jpg'));
+
+        $primaryImage = Image::make($keyword->products()->first()->primary_image_url);
+
+        $primaryImage->resize(400, 400, function ($constraint) {
+            $constraint->aspectRatio();
+        });
+
+        $image->insert($primaryImage, 'center-right', 100, 0);
+        $image->text($text, 100, 200, function ($font) use ($text){
+            $font->file(storage_path("app/fonts/Bangers-Regular.ttf"));
+            $font->size((3000/strlen($text))%100);
+            $font->color('#FF7000');
+        });
+
+
+        $image->resize(1280, 720);
+
+        //generate folder if not exist
+        $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
+        if(!file_exists(storage_path($folder))){
+            mkdir(storage_path($folder));
+        }
+
+        //generate unique name for image
+        $image_path = "$folder/thumbnail.jpg";
+
+        $image->save(storage_path($image_path));
+
     }
 
     public function generateVideo(GenerateVideo $commandHandler)
@@ -378,12 +415,14 @@ class VideoMakerController extends Controller
             VideoMakerController::generateImagesFromProduct($product);
             VideoMakerController::generateAudioScript($product);
             VideoMakerController::generateVideoForProduct($product);
+            return;
         }
 
         VideoMakerController::mergeProductsVideo($products, $data['keyword']);
         VideoMakerController::mergeBackGroundAudio($data['keyword']);
 
         VideoMakerController::generateLinksFile($data['keyword']);
+        VideoMakerController::generateThumbnail($data['keyword']);
 
         $commandHandler->info("Video generated successfully.");
 
@@ -672,13 +711,23 @@ Portions of stock footage of products were gathered from multiple sources includ
 If something belongs to you, and you want it to be removed, please do not hesitate to contact us through channel email address
 
 
+Amazon Affiliate Disclosure Notice:
+It is important to also note that [Channel Name] is a participant in the Amazon Services LLC Associates Program,
+an affiliate advertising program designed to provide a means for website owners to earn advertising fees by advertising and linking to amazon.com.
+
 
 #Best_$keywordHashTag
 #Top_5_Best_$keywordHashTag
 EOT;
 
+        //generate folder if not exist
+        $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
+        if(!file_exists(storage_path($folder))){
+            mkdir(storage_path($folder));
+        }
 
-        $file = fopen(storage_path("app/output/$keyword->keyword.txt"), "w");
+
+        $file = fopen(storage_path("$folder/$keyword->keyword.txt"), "w");
         fwrite($file, $text . "\n");
         fclose($file);
     }
@@ -754,6 +803,8 @@ EOT;
             ->setName('en-US-Neural2-J');
 
         $audioConfig = (new AudioConfig())
+            ->setPitch(1.20)
+            ->setEffectsProfileId(['headphone-class-device'])
             ->setAudioEncoding(AudioEncoding::MP3);
 
         $response = $client->synthesizeSpeech($synthesisInputText, $voice, $audioConfig);

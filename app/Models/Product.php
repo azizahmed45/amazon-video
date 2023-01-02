@@ -16,7 +16,8 @@ class Product extends Model
         'price',
         'image_urls',
         'scripts',
-        'keyword_id'
+        'keyword_id',
+        'url'
     ];
 
     protected $casts = [

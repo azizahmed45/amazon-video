@@ -12,7 +12,8 @@ class Attachment extends Model
     protected $fillable = [
         'type',
         'name',
-        'product_id'
+        'product_id',
+        'keyword_id'
     ];
 
     public function product()

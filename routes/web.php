@@ -20,7 +20,13 @@ use Symfony\Component\Process\Process;
 
 Route::get("test1", function () {
 
-//    $keword = \App\Models\Keyword::query()->find(4);
+
+
+    $keword = \App\Models\Keyword::query()->find(14);
+
+     VideoMakerController::generateThumbnail($keword);
+
+     return "test";
 //    VideoMakerController::mergeProductsVideo($keword->products,$keword);
 //
 //return "done";
