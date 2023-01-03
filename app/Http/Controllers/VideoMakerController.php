@@ -364,7 +364,8 @@ class VideoMakerController extends Controller
         $image->insert($primaryImage, 'center-right', 100, 0);
         $image->text($text, 100, 200, function ($font) use ($text){
             $font->file(storage_path("app/fonts/Bangers-Regular.ttf"));
-            $font->size((3000/strlen($text))%100);
+            $fontSize = (4000/strlen($text));
+            $font->size(min($fontSize, 80));
             $font->color('#FF7000');
         });
 
