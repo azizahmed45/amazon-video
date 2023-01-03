@@ -22,7 +22,11 @@ Route::get("test1", function () {
 
 
 
-    $keword = \App\Models\Keyword::query()->find(14);
+    $keword = \App\Models\Keyword::query()->find(13);
+    $product = $keword->products()->first();
+
+    VideoMakerController::generatePrimaryImage($product);
+    return "test";
 
      VideoMakerController::generateThumbnail($keword);
 

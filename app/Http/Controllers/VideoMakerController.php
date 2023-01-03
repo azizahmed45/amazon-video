@@ -127,7 +127,28 @@ class VideoMakerController extends Controller
     public static function generatePrimaryImage(Product $product)
     {
         $primaryTemplate = Image::make(storage_path('app/template/primary_image.jpg'));
-        $primaryImage = Image::make($product->primary_image_url);
+
+        //remove background
+        $bg_removed_path = "app/images/" . Str::uuid() . ".png";
+        $command = "curl -s " . $product->primary_image_url . " | " . escapeshellarg(env('REMBG_BINARIES')) . " i > " . storage_path($bg_removed_path);
+
+        shell_exec($command);
+
+        //save attachment to database
+        $product->attachments()->create([
+            'name' => $bg_removed_path,
+            'type' => 'primary_main_image'
+        ]);
+
+//        $process = Process::fromShellCommandline($command, null, ['HOME' => storage_path('app')]);
+//        $process->setTimeout(1000000);
+//        $process->run();
+//
+//        if (!$process->isSuccessful()) {
+//            throw new ProcessFailedException($process);
+//        }
+
+        $primaryImage = Image::make(storage_path($bg_removed_path));
 
         $primaryImage->resize(null, 400, function ($constraint) {
             $constraint->aspectRatio();
@@ -355,7 +376,19 @@ class VideoMakerController extends Controller
         $text = strtoupper("Top 5 Best \n" . wordwrap($keyword->keyword, 12, "\n", true));
         $image = Image::make(storage_path('app/template/thumb-template.jpg'));
 
-        $primaryImage = Image::make($keyword->products()->first()->primary_image_url);
+        //remove background
+        $bg_removed_path = "app/images/" . Str::uuid() . ".png";
+        $command = "curl -s " . $keyword->products()->first()->primary_image_url . " | " . escapeshellarg(env('REMBG_BINARIES')) . " i > " . storage_path($bg_removed_path);
+
+        shell_exec($command);
+
+        //save attachment to database
+        $keyword->attachments()->create([
+            'name' => $bg_removed_path,
+            'type' => 'primary_main_image'
+        ]);
+
+        $primaryImage = Image::make(storage_path($bg_removed_path));
 
         $primaryImage->resize(400, 400, function ($constraint) {
             $constraint->aspectRatio();
