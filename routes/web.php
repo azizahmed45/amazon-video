@@ -21,7 +21,7 @@ use Symfony\Component\Process\Process;
 Route::get("test1", function () {
 
 
-    $keword = \App\Models\Keyword::query()->find(14);
+    $keword = \App\Models\Keyword::query()->find(23);
 
      VideoMakerController::generateThumbnail($keword);
 

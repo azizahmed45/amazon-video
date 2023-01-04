@@ -353,15 +353,17 @@ class VideoMakerController extends Controller
     public static function generateThumbnail(Keyword $keyword)
     {
         $text = strtoupper("Top 5 Best \n" . wordwrap($keyword->keyword, 12, "\n", true));
-        $image = Image::make(storage_path('app/template/thumb-template.jpg'));
+        $bg_layer = Image::canvas(1000, 600, '#FFFFFF');
+        $image = Image::make(storage_path('app/template/thumb-layer.png'));
 
         $primaryImage = Image::make($keyword->products()->first()->primary_image_url);
 
-        $primaryImage->resize(400, 400, function ($constraint) {
+        $primaryImage->resize(350, 350, function ($constraint) {
             $constraint->aspectRatio();
         });
 
-        $image->insert($primaryImage, 'center-right', 100, 0);
+        $bg_layer->insert($primaryImage, 'center-right', 100, 0);
+
         $image->text($text, 100, 200, function ($font) use ($text){
             $font->file(storage_path("app/fonts/Bangers-Regular.ttf"));
             $fontSize = (4000/strlen($text));
@@ -369,8 +371,10 @@ class VideoMakerController extends Controller
             $font->color('#FF7000');
         });
 
+        $bg_layer->insert($image, 'center-left', 0, 0);
 
-        $image->resize(1280, 720);
+
+        $bg_layer->resize(1280, 720);
 
         //generate folder if not exist
         $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
@@ -381,7 +385,7 @@ class VideoMakerController extends Controller
         //generate unique name for image
         $image_path = "$folder/thumbnail.jpg";
 
-        $image->save(storage_path($image_path));
+        $bg_layer->save(storage_path($image_path));
 
     }
 
