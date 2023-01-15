@@ -396,6 +396,7 @@ class VideoMakerController extends Controller
         $keywords = explode(",", $commandHandler->argument("keyword"));
 
         foreach ($keywords as $keywordText) {
+            try{
 
             $commandHandler->comment("Generating video for keyword: " . $keywordText);
 
@@ -433,6 +434,9 @@ class VideoMakerController extends Controller
             VideoMakerController::generateThumbnail($data['keyword']);
 
             $commandHandler->info("Video generated successfully.");
+            }catch (\Exception $exception){
+                $commandHandler->error($exception->getMessage());
+            }
         }
     }
 
