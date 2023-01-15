@@ -222,14 +222,14 @@ class VideoMakerController extends Controller
     public static function generateVideoForProduct(Product $product)
     {
 
-        $audios = $product->attachments()->whereIn('type', ['title_audio','audio'])->get();
-        $images = $product->attachments()->whereIn('type', ['primary_image','image'])->get();
+        $audios = $product->attachments()->whereIn('type', ['title_audio', 'audio'])->get();
+        $images = $product->attachments()->whereIn('type', ['primary_image', 'image'])->get();
         $video_attachments = [];
 
-        for($i = 0; $i < count($audios); $i++){
+        for ($i = 0; $i < count($audios); $i++) {
 
             $video_path = 'app/videos/' . Str::uuid() . ".mp4";
-            $ffmpegCommand = env('FFMPEG_BINARIES') . " -loop 1 -i " . storage_path( $images[$i]->name) . " -i " . storage_path( $audios[$i]->name) . " -c:v libx264 -tune stillimage -c:a aac -strict experimental -b:a 192k -pix_fmt yuv420p -shortest -fflags shortest -max_interleave_delta 100M " . storage_path($video_path);
+            $ffmpegCommand = env('FFMPEG_BINARIES') . " -loop 1 -i " . storage_path($images[$i]->name) . " -i " . storage_path($audios[$i]->name) . " -c:v libx264 -tune stillimage -c:a aac -strict experimental -b:a 192k -pix_fmt yuv420p -shortest -fflags shortest -max_interleave_delta 100M " . storage_path($video_path);
 
             Log::info($ffmpegCommand);
             $process = Process::fromShellCommandline($ffmpegCommand);
@@ -252,12 +252,12 @@ class VideoMakerController extends Controller
         $video_path = "app/videos/" . Str::uuid() . ".mp4";
         $ffmpegCommand = env('FFMPEG_BINARIES');
 
-        foreach ($video_attachments as $video_attachment){
+        foreach ($video_attachments as $video_attachment) {
             $ffmpegCommand .= " -i " . storage_path($video_attachment);
         }
 
         $ffmpegCommand .= " -filter_complex \"";
-        for($i = 0; $i < count($video_attachments); $i++){
+        for ($i = 0; $i < count($video_attachments); $i++) {
             $ffmpegCommand .= "[" . $i . ":v] [" . $i . ":a] ";
         }
 
@@ -292,16 +292,16 @@ class VideoMakerController extends Controller
         $input_counter++;
 
         for ($i = count($productList) - 1; $i >= 0; $i--) {
-            $ffmpegCommand .= " -i " . storage_path("app/template/" . ($i+1) . ".mp4");
+            $ffmpegCommand .= " -i " . storage_path("app/template/" . ($i + 1) . ".mp4");
             $input_counter++;
-            $product_video = $productList[$i]->attachments()->where('type','product_video')->first();
-            $ffmpegCommand .= " -i " . storage_path( $product_video->name);
+            $product_video = $productList[$i]->attachments()->where('type', 'product_video')->first();
+            $ffmpegCommand .= " -i " . storage_path($product_video->name);
             $input_counter++;
         }
         $ffmpegCommand .= " -i " . storage_path("app/template/outro.mp4");
         $input_counter++;
 
-        $video_path = "app/videos/". Str::uuid() .".mp4";
+        $video_path = "app/videos/" . Str::uuid() . ".mp4";
         $ffmpegCommand .= " -filter_complex \"concat=n=" . ($input_counter) . ":v=1:a=1\" -vsync 2 -y " . escapeshellarg(storage_path($video_path));
 
         Log::info($ffmpegCommand);
@@ -320,17 +320,18 @@ class VideoMakerController extends Controller
 
     }
 
-    public static function mergeBackGroundAudio(Keyword $keyword){
+    public static function mergeBackGroundAudio(Keyword $keyword)
+    {
         $background_audio_path = "app/template/audio.mp3";
         $video = $keyword->attachments()->where('type', 'output_video')->first();
 
         //generate folder if not exist
         $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
-        if(!file_exists(storage_path($folder))){
+        if (!file_exists(storage_path($folder))) {
             mkdir(storage_path($folder));
         }
 
-        $video_path = "$folder/keyword_" . $keyword->id . $keyword->keyword .".mp4";
+        $video_path = "$folder/keyword_" . $keyword->id . $keyword->keyword . ".mp4";
 
         $ffmpegCommand = env('FFMPEG_BINARIES') . " -i " . storage_path($video->name) . " -i " . storage_path($background_audio_path) . " -filter_complex \"[0:a]volume=1[a1];[1:a]volume=0.2[a2];[a1][a2]amix=inputs=2[a]\" -map 0:v -map \"[a]\"  -c:v copy -c:a aac -strict experimental -shortest " . escapeshellarg(storage_path($video_path));
 
@@ -364,9 +365,9 @@ class VideoMakerController extends Controller
 
         $bg_layer->insert($primaryImage, 'center-right', 100, 0);
 
-        $image->text($text, 100, 200, function ($font) use ($text){
+        $image->text($text, 100, 200, function ($font) use ($text) {
             $font->file(storage_path("app/fonts/Bangers-Regular.ttf"));
-            $fontSize = (4000/strlen($text));
+            $fontSize = (4000 / strlen($text));
             $font->size(min($fontSize, 80));
             $font->color('#FFFFFF');
         });
@@ -378,7 +379,7 @@ class VideoMakerController extends Controller
 
         //generate folder if not exist
         $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
-        if(!file_exists(storage_path($folder))){
+        if (!file_exists(storage_path($folder))) {
             mkdir(storage_path($folder));
         }
 
@@ -391,45 +392,50 @@ class VideoMakerController extends Controller
 
     public function generateVideo(GenerateVideo $commandHandler)
     {
-        $keywordText = $commandHandler->argument("keyword");
+        //split keyword on comma
+        $keywords = explode(",", $this->keyword);
 
-        $commandHandler->comment("Generating video for keyword: " . $keywordText);
+        foreach ($keywords as $keywordText) {
 
-        $commandHandler->comment("Deleting old temp files.");
+            $keywordText = $commandHandler->argument("keyword");
 
-        //delete all attached files
-        $attachmentList = \App\Models\Attachment::query()->where("type", "!=", "final_video")->get();
-        foreach ($attachmentList as $attachment) {
-            $realPath = storage_path($attachment->name);
-            if (File::exists($realPath)) {
-                File::delete($realPath);
+            $commandHandler->comment("Generating video for keyword: " . $keywordText);
+
+            $commandHandler->comment("Deleting old temp files.");
+
+            //delete all attached files
+            $attachmentList = \App\Models\Attachment::query()->where("type", "!=", "final_video")->get();
+            foreach ($attachmentList as $attachment) {
+                $realPath = storage_path($attachment->name);
+                if (File::exists($realPath)) {
+                    File::delete($realPath);
+                }
             }
+
+            $commandHandler->comment("Getting amazon products.");
+
+            $data = VideoMakerController::getItems($keywordText);
+            $products = VideoMakerController::saveProducts($data['items'], $data['keyword'], 5);
+
+            $commandHandler->comment("Generating product videos.");
+
+            VideoMakerController::generateIntro($data['keyword']);
+
+            foreach ($products as $product) {
+                VideoMakerController::generatePrimaryImage($product);
+                VideoMakerController::generateImagesFromProduct($product);
+                VideoMakerController::generateAudioScript($product);
+                VideoMakerController::generateVideoForProduct($product);
+            }
+
+            VideoMakerController::mergeProductsVideo($products, $data['keyword']);
+            VideoMakerController::mergeBackGroundAudio($data['keyword']);
+
+            VideoMakerController::generateLinksFile($data['keyword']);
+            VideoMakerController::generateThumbnail($data['keyword']);
+
+            $commandHandler->info("Video generated successfully.");
         }
-
-        $commandHandler->comment("Getting amazon products.");
-
-        $data = VideoMakerController::getItems($keywordText);
-        $products = VideoMakerController::saveProducts($data['items'], $data['keyword'], 5);
-
-        $commandHandler->comment("Generating product videos.");
-
-        VideoMakerController::generateIntro($data['keyword']);
-
-        foreach ($products as $product) {
-            VideoMakerController::generatePrimaryImage($product);
-            VideoMakerController::generateImagesFromProduct($product);
-            VideoMakerController::generateAudioScript($product);
-            VideoMakerController::generateVideoForProduct($product);
-        }
-
-        VideoMakerController::mergeProductsVideo($products, $data['keyword']);
-        VideoMakerController::mergeBackGroundAudio($data['keyword']);
-
-        VideoMakerController::generateLinksFile($data['keyword']);
-        VideoMakerController::generateThumbnail($data['keyword']);
-
-        $commandHandler->info("Video generated successfully.");
-
     }
 
     public function generateVideoOld(GenerateVideo $commandHandler)
@@ -726,7 +732,7 @@ EOT;
 
         //generate folder if not exist
         $folder = "app/output/" . $keyword->keyword . "_" . $keyword->id;
-        if(!file_exists(storage_path($folder))){
+        if (!file_exists(storage_path($folder))) {
             mkdir(storage_path($folder));
         }
 
