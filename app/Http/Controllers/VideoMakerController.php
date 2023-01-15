@@ -393,11 +393,9 @@ class VideoMakerController extends Controller
     public function generateVideo(GenerateVideo $commandHandler)
     {
         //split keyword on comma
-        $keywords = explode(",", $this->keyword);
+        $keywords = explode(",", $commandHandler->argument("keyword"));
 
         foreach ($keywords as $keywordText) {
-
-            $keywordText = $commandHandler->argument("keyword");
 
             $commandHandler->comment("Generating video for keyword: " . $keywordText);
 
