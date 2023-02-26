@@ -592,6 +592,7 @@ EOT;
             ->setName('en-US-Student-O');
 
         $audioConfig = (new AudioConfig())
+            ->setSpeakingRate(1.04)
             ->setPitch(20.00)
             ->setEffectsProfileId(['handset-class-device'])
             ->setAudioEncoding(AudioEncoding::MP3);
