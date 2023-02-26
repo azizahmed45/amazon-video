@@ -589,11 +589,11 @@ EOT;
 
         $voice = (new VoiceSelectionParams())
             ->setLanguageCode('en-US')
-            ->setName('en-US-Neural2-J');
+            ->setName('en-US-Student-O');
 
         $audioConfig = (new AudioConfig())
-            ->setPitch(1.20)
-            ->setEffectsProfileId(['headphone-class-device'])
+            ->setPitch(20.00)
+            ->setEffectsProfileId(['handset-class-device'])
             ->setAudioEncoding(AudioEncoding::MP3);
 
         $response = $client->synthesizeSpeech($synthesisInputText, $voice, $audioConfig);
