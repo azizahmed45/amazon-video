@@ -589,7 +589,7 @@ EOT;
 
         $voice = (new VoiceSelectionParams())
             ->setLanguageCode('en-US')
-            ->setName('en-US-Student-O');
+            ->setName('en-US-Studio-O');
 
         $audioConfig = (new AudioConfig())
             ->setSpeakingRate(1.04)
