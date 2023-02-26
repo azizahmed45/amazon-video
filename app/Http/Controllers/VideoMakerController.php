@@ -325,7 +325,10 @@ class VideoMakerController extends Controller
         //generate folder if not exist
         $folder = self::generateOutputFolder($keyword);
 
-        $video_path = "$folder/Top 5 Best " . $keyword->keyword . ".mp4";
+        //uppercase first letter of each word
+        $keyword_uppercase = ucwords($keyword->keyword);
+
+        $video_path = "$folder/Top 5 Best " . $keyword_uppercase . ".mp4";
 
         $ffmpegCommand = env('FFMPEG_BINARIES') . " -i " . storage_path($video->name) . " -i " . storage_path($background_audio_path) . " -filter_complex \"[0:a]volume=1[a1];[1:a]volume=0.2[a2];[a1][a2]amix=inputs=2[a]\" -map 0:v -map \"[a]\"  -c:v copy -c:a aac -strict experimental -shortest " . escapeshellarg(storage_path($video_path));
 
