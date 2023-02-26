@@ -12,7 +12,7 @@ class GenerateVideo extends Command
      *
      * @var string
      */
-    protected $signature = 'generate:video {keyword}';
+    protected $signature = 'generate:video {--F|file=}';
 
     /**
      * The console command description.
