@@ -531,7 +531,7 @@ EOT;
         $url = $product->url;
 
         //short using our own domain
-        $domain = "https://ourdomain.com/public";
+        $domain =env('SHORT_URL_DOMAIN');
         $shorten = Http::post("$domain/api/shorten", [
             "url" => $url
         ])->json(['shortened_url']);
