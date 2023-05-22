@@ -10,9 +10,12 @@ use Google\Cloud\TextToSpeech\V1\TextToSpeechClient;
 use Google\Cloud\TextToSpeech\V1\VoiceSelectionParams;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
+use Laravel\Dusk\Browser;
 use Revolution\Amazon\ProductAdvertising\Facades\AmazonProduct;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -77,5 +80,6 @@ Route::get("test1", function () {
 });
 
 Route::get("test2", function () {
-
+    Log::info(Http::get('https://www.amazon.com/iOttie-Dashboard-Windshield-Samsung-Smartphones/dp/B0875RKTQF/ref=lp_87854825011_1_1?sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D')
+        ->body());
 });

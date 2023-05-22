@@ -529,6 +529,15 @@ EOT;
     {
         //short url using tinnyurl
         $url = $product->url;
+
+        //short using our own domain
+        $domain = "https://ourdomain.com/public";
+        $shorten = Http::post("$domain/api/shorten", [
+            "url" => $url
+        ])->json(['shortened_url']);
+
+        $url = "$domain/r/$shorten";
+
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
     }
 
