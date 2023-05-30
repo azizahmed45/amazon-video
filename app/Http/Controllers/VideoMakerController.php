@@ -52,7 +52,8 @@ class VideoMakerController extends Controller
                     'primary_image_url' => $items[$i]["Images"]["Primary"]["Large"]["URL"],
                     'image_urls' => $image_urls,
                     'price' => $items[$i]["Offers"]["Listings"][0]["Price"]["DisplayAmount"],
-                    'keyword_id' => $keyword->id
+                    'keyword_id' => $keyword->id,
+                    'asin' => $items[$i]["ASIN"],
                 ]);
 
                 //generate scripts
@@ -528,7 +529,7 @@ EOT;
     public static function generateAmazonLink(Product $product)
     {
         //short url using tinnyurl
-        $url = $product->url;
+        $url = self::generateAmazonURLWithAsin($product->asin, env('OUR_AMAZON_TRACKING_ID'));
 
         //short using our own domain
         $domain =env('SHORT_URL_DOMAIN');
@@ -539,6 +540,15 @@ EOT;
         $url = "$domain/r/$shorten";
 
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
+    }
+
+    public static function generateAmazonURLWithAsin($asin, $trackingId) {
+        $baseURL = "https://www.amazon.com/dp/";
+        $queryParameters = array(
+            'tag' => $trackingId
+        );
+        $url = $baseURL . $asin . '?' . http_build_query($queryParameters);
+        return $url;
     }
 
     public static function generateScript($productName, $productFeatures, $price)
