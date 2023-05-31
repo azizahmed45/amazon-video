@@ -385,6 +385,56 @@ class VideoMakerController extends Controller
 
     }
 
+    public static function generateOnlyDescriptionFile(GenerateVideo $commandHandler){
+        //get keywords from text file or from command line option
+        //each line one keyword
+        $file_path = $commandHandler->option("file");
+        //if file exist
+        if (File::exists($file_path)) {
+            $keywords = file($file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            //trim all keywords
+            $keywords = array_map('trim', $keywords);
+
+            //remove "Best" "best" from beginning of keywords
+            $keywords = array_map(function ($keyword) {
+                return preg_replace('/^best\s/i', '', $keyword);
+            }, $keywords);
+
+        } else {
+            throw new \Exception("File not found");
+        }
+
+        foreach ($keywords as $keywordText) {
+            try {
+
+                $commandHandler->comment("Generating description file for keyword: " . $keywordText);
+
+                $commandHandler->comment("Deleting old temp files.");
+
+                //delete all attached files
+                $attachmentList = \App\Models\Attachment::query()->where("type", "!=", "final_video")->get();
+                foreach ($attachmentList as $attachment) {
+                    $realPath = storage_path($attachment->name);
+                    if (File::exists($realPath)) {
+                        File::delete($realPath);
+                    }
+                }
+
+                $commandHandler->comment("Getting amazon products.");
+
+                $data = VideoMakerController::getItems($keywordText);
+                VideoMakerController::saveProducts($data['items'], $data['keyword'], 5);
+
+                VideoMakerController::generateLinksFile($data['keyword']);
+
+                $commandHandler->info("Description generated successfully.");
+
+            } catch (\Exception $exception) {
+                $commandHandler->error($exception->getMessage());
+            }
+        }
+    }
+
     public function generateVideo(GenerateVideo $commandHandler)
     {
         //get keywords from text file or from command line option

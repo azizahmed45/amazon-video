@@ -12,7 +12,7 @@ class GenerateVideo extends Command
      *
      * @var string
      */
-    protected $signature = 'generate:video {--F|file=}';
+    protected $signature = 'generate:video {--F|file=} {--only-description}';
 
     /**
      * The console command description.
@@ -38,7 +38,11 @@ class GenerateVideo extends Command
      */
     public function handle(VideoMakerController $videoMakerController)
     {
-        $videoMakerController->generateVideo($this);
+        if($this->option('only-description')){
+            VideoMakerController::generateOnlyDescriptionFile($this);
+        } else {
+            $videoMakerController->generateVideo($this);
+        }
         return 0;
     }
 }
