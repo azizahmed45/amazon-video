@@ -537,7 +537,7 @@ EOT;
             "url" => $url
         ])->json(['shortened_url']);
 
-        $url = "$domain/r/$shorten";
+        $url = "$domain/j/$shorten";
 
         return file_get_contents("https://tinyurl.com/api-create.php?url=" . $url);
     }
